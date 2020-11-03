@@ -212,14 +212,22 @@ The above code will disable the round frequencies behavior.
 
 ## PUT /Settings/AudioGen/{Generator}/{On}/{Frequency}/{Amplitude}
 
-Set the specified generator (1 or 2) to on or off (1=on, 0=off) to the specified frequency and amplitude. For example to set Gen1 on and at a level of 0 dBV and 1 KHz, you would issue  
+Set the specified generator (Gen1 or Gen2) to On or Off to the specified frequency and amplitude. For example to set Gen1 on and at a level of 0 dBV and 1 KHz, you would issue  
 
-`HTTP PUT localhost:9401/Settings/AudioGen/1/1/1000/0`  
+`HTTP PUT localhost:9401/Settings/AudioGen/Gen1/On/1000/0`
+
+_note_: in versions earlier than 0.96, the Generator and On/Off parameters were numerical:
+- (Gen1=1, Gen2=2)
+- (1=On, 0=Off)
+
+The command then looked like:
+`HTTP PUT localhost:9401/Settings/AudioGen/1/1/1000/0`
+
 
 ### Arguments
 
-**Generator** Specifies which audio generator is being assigned. Valid values are 1 or 2  
-**On** Specifies if the generator should be 'on' (on = '1') or off (on = '0')  
+**Generator** Specifies which audio generator is being assigned. Valid values are Gen1 or Gen2  
+**On** Specifies if the generator should be on or off. Valid values are On and Off  
 **Frequency** Specifies the generator frequency, in Hz. Valid values are >= 1 Hz and <= 96000 Hz.  
 **Amplitude** Specifies the generator amplitude in dBV. Valid values are >= -120 dBV and <= 6 dBV  
 
