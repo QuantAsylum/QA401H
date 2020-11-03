@@ -218,7 +218,7 @@ Set the specified generator (Gen1 or Gen2) to On or Off to the specified frequen
 
 _note_: in versions earlier than 0.96, the Generator and On/Off parameters were numerical:
 - (Gen1=1, Gen2=2)
-- (1=On, 0=Off)
+- (On=1, Off=0)
 
 The command then looked like:
 `HTTP PUT localhost:9401/Settings/AudioGen/1/1/1000/0`
