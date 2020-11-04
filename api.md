@@ -1,34 +1,42 @@
-`
+THE MOST RECENT VERSION OF THIS FILE CAN BE FOUND BY RUNNING THE QA401H APPLICATION AND OPENING THE URL http:/localhost:9401
+``
 
-# QA401 REST API
+QA401H REST API (version: 0.997)
+================================
 
-* * *
+* * * * *
 
-# General Operation
+General Operation
+=================
 
-* * *
+* * * * *
 
-## Philosophy
+Philosophy
+----------
 
 The original QA401 API was based on Dot Net remoting. This is an exceptionally clean and type-safe interface for sharing data across a wire. But it's not readily replicated outside of DotNet, and it's also been deprecated by Microsoft. REST as a design philosophy has gained enormous momentum, and as such it's achieved generous support and careful consideration on just about every language and platform imaginable.
 
-## Basic Operation
+Additional information on running on various operating systems can be found [HERE](https://github.com/QuantAsylum/QA401H/wiki)
+
+Basic Operation
+---------------
 
 The flow of using the QA401 over a REST interface is straightforward:
 
-1\. Set the operating parameters, such as audio buffer size and windowing types. This is accomplished with multiple PUT operations.
+1. Set the operating parameters, such as audio buffer size and windowing types. This is accomplished with multiple PUT operations.
 
-2\. After the desired configuration is achieved, an HTTP POST is issued to start an acquisition. This occurs with the parameters that were specified in step 1.
+2. After the desired configuration is achieved, an HTTP POST is issued to start an acquisition. This occurs with the parameters that were specified in step 1.
 
-3\. The user can initiate analysis on the acquired data repetitively until the requirements are met. Note that while you CAN pull over the raw acquired data--either as a time or frequency series--many basic operations, such as computing noise or THD or measuring peak levels can be computed without pulling any raw data from the server.
+3. The user can initiate analysis on the acquired data repetitively until the requirements are met. Note that while you CAN pull over the raw acquired data--either as a time or frequency series--many basic operations, such as computing noise or THD or measuring peak levels can be computed without pulling any raw data from the server.
 
-## Simple Example
+Simple Example
+--------------
 
 As a very simple example, let's look at the HTTP commands you'd use to to make a 1 KHz THD measurement:
 
 First, we'd want to set Audio Generator 1 'on', at a level of 0 dBV and a frequency of 1 KHz. That is accomplished with the following PUT command
 
-HTTP PUT localhost:9401/Settings/AudioGen/1/1/1000/0
+HTTP PUT localhost:9401/Settings/AudioGen/Gen1/On/1000/0
 
 Next, we specify we want a 32K FFT buffer size:
 
@@ -56,15 +64,17 @@ Note in the above we see the same SessionId as before, indicating this is the sa
 
 Note that without the SessionId, it would be possible for an errant acquisition to be started by a 3rd party. While the REST interface doesn't contemplate user accounts or security, it does make it possible to ensure the data you are operating upon is the data you expect.
 
-* * *
+* * * * *
 
-# Returned Data Types
+Returned Data Types
+===================
 
-* * *
+* * * * *
 
-Depening on the operation, the server may return one of 6 data types. All are JSON structures.  
+Depening on the operation, the server may return one of 6 data types. All are JSON structures.
 
-## EMPTY
+EMPTY
+-----
 
 An empty return will consists of a JSON structure that contains a single element, which is the Session ID. This would appears as
 
@@ -72,7 +82,8 @@ An empty return will consists of a JSON structure that contains a single element
 
 As discussed above, the Session ID for all return types will remain constants across the lifetime of an acquisition.
 
-## BOOLEAN
+BOOLEAN
+-------
 
 A boolean return will consists of a JSON structure that contains two elements: a Session ID and a value that was either True or False. This would appears as
 
@@ -80,7 +91,8 @@ A boolean return will consists of a JSON structure that contains two elements: a
 
 As discussed above, the Session ID for all return types will remain constants across the lifetime of an acquisition.
 
-## INT
+INT
+---
 
 A int return will consists of a JSON structure that contains two elements: a Session ID and a value that is a signed 32-bit int. This would appears as
 
@@ -88,7 +100,8 @@ A int return will consists of a JSON structure that contains two elements: a Ses
 
 As discussed above, the Session ID for all return types will remain constants across the lifetime of an acquisition.
 
-## SCALAR
+SCALAR
+------
 
 A Scalar return will consists of a JSON structure that contains a SessionId and a scaler double value. This would appears as
 
@@ -96,7 +109,8 @@ A Scalar return will consists of a JSON structure that contains a SessionId and 
 
 A scalar return type is used when a single double value needs to be returned. An example might be the current software version in use.
 
-## SCALAR PAIR
+SCALAR PAIR
+-----------
 
 A Scalar Pair return will consists of a JSON structure that contains a pair of scalar values. This would appears as
 
@@ -104,43 +118,43 @@ A Scalar Pair return will consists of a JSON structure that contains a pair of s
 
 This return type is useful for returning a left/right pair of measurements. For example, if you asked for the THD to be computed on some acquired data, both the left and right data would be returned. If you are only interested in a single channel, then just ignore the un-needed channel.
 
-## DOUBLE ARRAY
+DOUBLE ARRAY
+------------
 
 A Double Array return will consists of a JSON structure that contains a Session Id, an element named Dx, and two MIME-encoded strings: One for the left channel, and one for the right channel. This would appears as
 
 {"SessionId":"286930", "Dx":"5.859375", "Left":"PElx+QYE", "Right":"Or9Ub8kU" }
 
-The Dx value represents the spacing of the array data. The MIME-encoded strings represent binary data for the left and right channels. While the return strings above are short for demonstration, in actuality the real strings will be very long--several megabytes in some cases. To decode this data, you need to use the standard functions in your preferred language to convert mime strings to byte arrays, and then assemble those byte arrays into 64-bit doubles. Once you have reconstructed the arrays of doubles, the Dx value tells you the spacing between each value. For example, the above data in the example is frequency bin data, and the spacing between each bin is 5.85 Hz. But you could also pull over the time-domaindata too. In that case, the Dx value would represent the sampling period.
+The Dx value represents the spacing of the array data (usually in Hz). The MIME-encoded strings represent binary data for the left and right channels. While the return strings above are short for demonstration, in actuality the real strings will be very long--several megabytes in some cases. To decode this data, you need to use the standard functions in your preferred language to convert mime strings to byte arrays, and then assemble those byte arrays into 64-bit doubles. Once you have reconstructed the arrays of doubles, the Dx value tells you the spacing between each value. For example, the above data in the example is frequency bin data, and the spacing between each bin is 5.85 Hz. But you could also pull over the time-domaindata too. In that case, the Dx value would represent the sampling period.
 
-The C# code used to convert the doubles arrays to MIME strings is shown below. Converting back should be an straightforward exercise.
+The C\# code used to convert the doubles arrays to MIME strings is shown below.
 
-`
+``
 
-public override string ToJsonString()  
-{  
-string l = Convert.ToBase64String(GetBytes(Left));  
-string r = Convert.ToBase64String(GetBytes(Right));  
-return string.Format("{{ "SessionId":"{0}", "Dx":"{1}" "Left":"{2}", "Right":"{3}" }}", SessionId, Dx, l, r);  
-};  
+public override string ToJsonString()
+{
+ string l = Convert.ToBase64String(GetBytes(Left));
+ string r = Convert.ToBase64String(GetBytes(Right));
+ return string.Format("{{ "SessionId":"{0}", "Dx":"{1}" "Left":"{2}", "Right":"{3}" }}", SessionId, Dx, l, r);
+};
+byte[] GetBytes(double[] vals);
+{
+ var result = new byte[vals.Length \* sizeof(double)];
+ Buffer.BlockCopy(vals, 0, result, 0, result.Length);
+ return result;
+};
 
-byte[] GetBytes(double[] vals);  
-{  
-var result = new byte[vals.Length * sizeof(double)];  
-Buffer.BlockCopy(vals, 0, result, 0, result.Length);  
-return result;  
-};  
+* * * * *
 
-`
+REST API
+========
 
-* * *
+* * * * *
 
-# REST API
+GET /Status/Version
+-------------------
 
-* * *
-
-## GET /Status/Version
-
-Initializes the settings used in future acquisitions to the default state.
+Returns the version of the software.
 
 ### Arguments
 
@@ -148,11 +162,12 @@ None.
 
 ### Example
 
-`HTTP GET /Status/Version`  
+`HTTP GET /Status/Version`
 
-* * *
+* * * * *
 
-## GET /Status/Connection
+GET /Status/Connection
+----------------------
 
 Indicates the status of the USB connection with the hardware. 'True' means connected.
 
@@ -162,13 +177,14 @@ None.
 
 ### Example
 
-`HTTP GET /Status/Connection`  
+`HTTP GET /Status/Connection`
 
-* * *
+* * * * *
 
-## PUT /Settings/Default
+PUT /Settings/Default
+---------------------
 
-Initializes the settings used in future acquisitions to the default state.
+Initializes the settings used for future acquisitions to the default state. This function is very lightweight and can be called at the beginning of each measurement to ensure you are starting from a known point.
 
 ### Arguments
 
@@ -176,58 +192,63 @@ None.
 
 ### Example
 
-`HTTP PUT /Settings/Default`  
+`HTTP PUT /Settings/Default`
 
-* * *
+* * * * *
 
-## PUT /Settings/SampleRate/{SampleRate}
+PUT /Settings/SampleRate/{SampleRate}
+-------------------------------------
 
-Sets the sample rate for the next acquisition.  
+Sets the sample rate for the next acquisition.
 
 ### Arguments
 
-**SampleRate:** The sample rate in Hz. This must be either 48000 or 192000
+**SampleRate:** The sample rate in Hz. This must be either 48000 or 192000. When the sample rate is changed, the QA401 hardware will immediately go through a reset which may generate click or pop on the outputs. The DC levels may also take a second or two to re-settle. There is no need to set the sample rate before every acquisition. Set it once when needed, and then only change it when needed, with the understanding that some settling time will be required.
 
 ### Example
 
-`HTTP PUT /Settings/SampleRate/192000  
+`HTTP PUT /Settings/SampleRate/192000`
 
-* * *
+* * * * *
 
-## PUT /Settings/RoundFrequencies/{Enable}
+PUT /Settings/RoundFrequencies/{Enable}
+---------------------------------------
 
-Automatically rounds generator frequencies to the near mid-bin value. This helps ensure spectral leakage is minimized. By default, this is enabled.
+Automatically rounds generator frequencies to the nearest mid-bin value. This helps ensure spectral leakage is minimized. By default, this is enabled. With rounding enabled, you can often use rectangular windowing if you are measuring a tone from the QA401 that is passing through a DUT.
 
 ### Arguments
 
-**Enable** 1=enabled, 0=disabled  
+**Enable** 'On' enables rounding, while 'Off' disables rounding.
 
 ### Example
 
-`HTTP PUT /Settings/RoundFrequencies/0  
+`HTTP PUT /Settings/RoundFrequencies/OffThe above code will disable the round frequencies behavior.`
 
-The above code will disable the round frequencies behavior.  
+* * * * *
 
-* * *
+PUT /Settings/AudioGen/{Generator}/{OnOff}/{Frequency}/{Amplitude}
+------------------------------------------------------------------
 
-## PUT /Settings/AudioGen/{Generator}/{On}/{Frequency}/{Amplitude}
-
-Set the specified generator (1 or 2) to on or off (1=on, 0=off) to the specified frequency and amplitude. For example to set Gen1 on and at a level of 0 dBV and 1 KHz, you would issue  
-
-`HTTP PUT localhost:9401/Settings/AudioGen/1/1/1000/0`  
+Set the specified generator ('Gen1' or 'Gen2') to 'On' or 'Off' and to the specified frequency and amplitude. For example to set Gen1 on and at a level of 0 dBV and 1 KHz, you would issue
+`HTTP PUT localhost:9401/Settings/AudioGen/Gen1/On/1000/0`
 
 ### Arguments
 
-**Generator** Specifies which audio generator is being assigned. Valid values are 1 or 2  
-**On** Specifies if the generator should be 'on' (on = '1') or off (on = '0')  
-**Frequency** Specifies the generator frequency, in Hz. Valid values are >= 1 Hz and <= 96000 Hz.  
-**Amplitude** Specifies the generator amplitude in dBV. Valid values are >= -120 dBV and <= 6 dBV  
+**Generator** Specifies which audio generator is being assigned. Valid values are 'Gen1' or 'Gen2'
+**On** Specifies if the generator should be on or off. Valid values are 'On' or 'Off'
+**Frequency** Specifies the generator frequency, in Hz. Valid values are \>= 1 Hz and \<= 96000 Hz.
+ **Amplitude** Specifies the generator amplitude in dBV. Valid values are \>= -120 dBV and \<= 5.8 dBV
 
-* * *
+### Example
 
-## PUT /Settings/BufferSize/{Size}
+`HTTP PUT /Settings/AudioGen/Gen2/On/1000/-10Enables Gen2 @ 1 kHz and -10 dBV`
 
-Sets the size of the buffer for the next acquisition.  
+* * * * *
+
+PUT /Settings/BufferSize/{Size}
+-------------------------------
+
+Sets the size of the buffer for the next acquisition.
 
 ### Arguments
 
@@ -235,110 +256,152 @@ Sets the size of the buffer for the next acquisition.
 
 ### Example
 
-`HTTP PUT /Settings/BufferSize/32768  
+`HTTP PUT /Settings/BufferSize/32768`
 
-* * *
+* * * * *
 
-## PUT /Settings/Input/Max/{MaxInputLevelDbv}
+PUT /Settings/Input/Max/{MaxInputLevelDbv}
+------------------------------------------
 
 Sets the attenuator state so that the maximum input level is the specified value.On the QA401, the allowed values are '6' and '26'. When '6' is specified, the maximum input value before clipping occurswill be +6 dBV. When '26' is specified, the maximum input value before clipping occurs is +26 dBV
 
 ### Arguments
 
-**MaxInputLevelDbv:** The maximum allowed value before clipping will occur. Valid values are 6 dBV and 26 dBV  
+**MaxInputLevelDbv:** The maximum allowed value before clipping will occur. Valid values are 6 dBV and 26 dBV
 
 ### Example
 
-`HTTP PUT /Settings/Input/Max/26  
+`HTTP PUT /Settings/Input/Max/26`
 
-* * *
+* * * * *
 
-## GET /ThdDb/{FundFreq}/{MaxFreq}
+PUT /Settings/Window/{WindowType}
+---------------------------------
 
-Gets the THD of the prior acquisition, expressed in decibels.  
+Sets the window type to be applied to the time series prior to FFT calculation
+
+### Arguments
+
+**WindowType:** Valid values (case senstitive) and are Rectangle, Bartlett, Hamming, Hann and FlatTop
+
+### Example
+
+`HTTP PUT /Settings/Window/Rectangle`
+
+* * * * *
+
+GET /SnrDb/{FundFreq}/{MinFreq}/{MaxFreq}
+-----------------------------------------
+
+Gets the SNR of the prior acquisition, expressed in decibels.
 
 ### Arguments:
 
-**FundFreq:** The frequency of the fundamental  
-**MaxFreq:** The maximum frequency at which harmonics will be considered. This must be below the nyquist frequency (0.5 sample rate)  
+**FundFreq:** The frequency of the fundamental
+**MinFreq:** The starting frequency for the noise measurement
+**MaxFreq:** The maximum frequency at which harmonics and noise will be considered. This must be below the nyquist frequency (0.5 sample rate)
 
 ### Example
 
-`GET ThdDb/1000/20000`  
+`GET SnrDb/1000/100/20000`
 
 ### Sample returned by server
 
-{"SessionId":"286930", "Left":"-101.929476869617", "Right":"-98.8973249362777"}  
+{"SessionId":"286930", "Left":"-101.929476869617", "Right":"-98.8973249362777"}
 
-* * *
+* * * * *
 
-## GET /ThdPct/{FundFreq}/{MaxFreq}
+GET /ThdDb/{FundFreq}/{MaxFreq}
+-------------------------------
+
+Gets the THD of the prior acquisition, expressed in decibels.
+
+### Arguments:
+
+**FundFreq:** The frequency of the fundamental
+**MaxFreq:** The maximum frequency at which harmonics will be considered. This must be below the nyquist frequency (0.5 sample rate)
+
+### Example
+
+`GET ThdDb/1000/20000`
+
+### Sample returned by server
+
+{"SessionId":"286930", "Left":"-101.929476869617", "Right":"-98.8973249362777"}
+
+* * * * *
+
+GET /ThdPct/{FundFreq}/{MaxFreq}
+--------------------------------
 
 Gets the THD of the prior acquisition, expressed in percent (0 to 100).
 
 ### Arguments:
 
-**FundFreq:** The frequency of the fundamental  
-**MaxFreq:** The maximum frequency at which harmonics will be considered. This should be below the nyquist frequency (0.5 sample rate)  
+**FundFreq:** The frequency of the fundamental
+**MaxFreq:** The maximum frequency at which harmonics will be considered. This should be below the nyquist frequency (0.5 sample rate)
 
 ### Example:
 
-`GET ThdPct/1000/20000`  
+`GET ThdPct/1000/20000`
 
 ### Sample returned by server
 
-{"SessionId":"286930", "Left":"0.001698239", "Right":"0.00153382"}  
+{"SessionId":"286930", "Left":"0.001698239", "Right":"0.00153382"}
 
-* * *
+* * * * *
 
-## GET /ThdnDb/{FundFreq}/{MinFreq}/{MaxFreq}
+GET /ThdnDb/{FundFreq}/{MinFreq}/{MaxFreq}
+------------------------------------------
 
-Gets the THD+N of the prior acquisition, expressed in decibels.  
+Gets the THD+N of the prior acquisition, expressed in decibels.
 
 ### Arguments:
 
-**FundFreq:** The frequency of the fundamental  
-**MinFreq:** The minimum used for the start of the noise calculation  
-**MaxFreq:** The maximum frequency for the noise calculation. This should be below the nyquist frequency (0.5 sample rate)  
+**FundFreq:** The frequency of the fundamental
+**MinFreq:** The minimum used for the start of the noise calculation
+**MaxFreq:** The maximum frequency for the noise calculation. This should be below the nyquist frequency (0.5 sample rate)
 
 ### Example
 
-`GET ThdDb/1000/20000`  
+`GET ThdDb/1000/20000`
 
 ### Sample returned by server
 
-{"SessionId":"286930", "Left":"-101.929476869617", "Right":"-98.8973249362777"}  
+{"SessionId":"286930", "Left":"-101.929476869617", "Right":"-98.8973249362777"}
 
-* * *
+* * * * *
 
-## GET /ThdnPct/{FundFreq}/{MinFreq}/{MaxFreq}
+GET /ThdnPct/{FundFreq}/{MinFreq}/{MaxFreq}
+-------------------------------------------
 
 Gets the THD of the prior acquisition, expressed in percent (0 to 100).
 
 ### Arguments:
 
-**FundFreq:** The frequency of the fundamental  
-**MinFreq:** The minimum used for the start of the noise calculation  
-**MaxFreq:** The maximum frequency for the noise calculation. This should be below the nyquist frequency (0.5 sample rate)  
+**FundFreq:** The frequency of the fundamental
+**MinFreq:** The minimum used for the start of the noise calculation
+**MaxFreq:** The maximum frequency for the noise calculation. This should be below the nyquist frequency (0.5 sample rate)
 
 ### Example:
 
-`GET ThdPct/1000/20000`  
+`GET ThdPct/1000/20000`
 
 ### Sample returned by server
 
-{"SessionId":"286930", "Left":"0.001698239", "Right":"0.00153382"}  
+{"SessionId":"286930", "Left":"0.001698239", "Right":"0.00153382"}
 
-* * *
+* * * * *
 
-## GET /RmsDbv/{StartFreq}/{EndFreq}
+GET /RmsDbv/{StartFreq}/{EndFreq}
+---------------------------------
 
 Computes the RMS of the prior acquisition, measured across the frequency bounds, and expressed in dBV
 
 ### Arguments:
 
-**StartFreq:** The starting frequency for the computation.  
-**EndFreq:** The ending frequency for the computation.  
+**StartFreq:** The starting frequency for the computation.
+**EndFreq:** The ending frequency for the computation.
 
 ### Example:
 
@@ -348,32 +411,56 @@ The code above will compute the RMS value in dBV of the acquired data from 20 to
 
 ### Sample returned by server
 
-{"SessionId":"286930", "Left":"-10.00", "Right":"-10.00"}  
+{"SessionId":"286930", "Left":"-10.00", "Right":"-10.00"}
 
-* * *
+* * * * *
 
-## GET /RmsDbv/AWeighting/{StartFreq}/{EndFreq}
+GET /RmsDbv/AWeighting/{StartFreq}/{EndFreq}
+--------------------------------------------
 
 Computes the RMS of the prior acquisition, measured across the frequency bounds, and expressed in dBVwith AWeighting applied.
 
 ### Arguments:
 
-**StartFreq:** The starting frequency for the computation.  
-**EndFreq:** The ending frequency for the computation.  
+**StartFreq:** The starting frequency for the computation.
+**EndFreq:** The ending frequency for the computation.
 
 ### Example:
 
-`GET RmsDbv/AWeighting/20/20000`  
+`GET RmsDbv/AWeighting/20/20000`
 
 ### Sample returned by server
 
-{"SessionId":"286930", "Left":"-10.00", "Right":"-10.00"}  
+{"SessionId":"286930", "Left":"-10.00", "Right":"-10.00"}
 
-* * *
+* * * * *
 
-## GET /Phase/Degrees
+GET /PeakDbv/{StartFreq}/{EndFreq}
+----------------------------------
 
-Computes the phase difference in degrees between the output (reference) and input at the frequency specified by Generator 1\. In computing the phase, the QA401H first computes the absolute delay, in seconds, between the output and input by observing interpolated zero crossings averaged over several cycles. That delay is then converted to phase at the specified frequency of Generator 1.
+Returns highest peak in dBV between the specified frequencies.
+
+### Arguments:
+
+**StartFreq:** The starting frequency for the computation.
+**EndFreq:** The ending frequency for the computation.
+
+### Example:
+
+`GET PeakDbv/20/20000`
+
+The code above will compute the highest peak value in dBV of the acquired data from 20 to 20 KHz.
+
+### Sample returned by server
+
+{"SessionId":"286930", "Left":"-10.00", "Right":"-10.00"}
+
+* * * * *
+
+GET /Phase/Degrees
+------------------
+
+Computes the phase difference in degrees between the output (reference) and input at the frequency specified by Generator 1. In computing the phase, the QA401H first computes the absolute delay, in seconds, between the output and input by observing interpolated zero crossings averaged over several cycles. That delay is then converted to phase at the specified frequency of Generator 1.
 
 ### Arguments:
 
@@ -387,9 +474,10 @@ The request accepts no arguments.
 
 `{"SessionId":"286930", "Left":"-0.30", "Right":"-0.45"}`
 
-* * *
+* * * * *
 
-## GET /Phase/Seconds
+GET /Phase/Seconds
+------------------
 
 Computes the time difference in seconds between the output (reference) and input. In computing the phase, the QA401H computes the absolute delay, in seconds, between the output and input by observing interpolated zero crossings averaged over several cycles.
 
@@ -399,23 +487,40 @@ The request accepts no arguments.
 
 ### Example:
 
-`GET Phase/Seconds`  
+`GET Phase/Seconds`
 
 ### Sample returned by server
 
 `{"SessionId":"286930", "Left":"-13.4e-6", "Right":"-13.4e-6"}`
 
-The -13.4e-6 indicates the input lags the output by 13.4 uS  
+The -13.4e-6 indicates the input lags the output by 13.4 uS
 
-* * *
+* * * * *
 
-## GET /Data/Freq/{Freq}
+GET /Data/Freq
+--------------
 
-Returns the frequency data of the prior acquisition. The data will be returned in aJSON element, consisting of:SessionId:  
+Returns the frequency data of the prior acquisition, with the data in volts (multiply by 20\*log10() to convert to dBV). The data will be returned in a DoubleArrayResult JSON element. The Dx element will represent the spacing of each FFT bin.
 
-* * *
+### Arguments:
 
-## GET /Graph/Frequency/In/{Channel}
+None
+
+* * * * *
+
+GET /Data/Time
+--------------
+
+Returns the time data of the prior acquisition, with the data representing volts. The data will be returned in a DoubleArrayResult JSON element. The Dx element will represent the sample interval (1/sample rate).
+
+### Arguments:
+
+None
+
+* * * * *
+
+GET /Graph/Frequency/In/{Channel}
+---------------------------------
 
 Returns a PNG of the specified input channel data. The graph Y axis is log, with 10 dB/division spacing. The graph X axis is linear, ranging from 0 to 20 KHz. This is primarily to be used for developers doing sanity checks on measurements.
 
@@ -425,13 +530,18 @@ Returns a PNG of the specified input channel data. The graph Y axis is log, with
 
 ### Example:
 
-[`GET Graph/Frequency/In/0`](http://localhost:9401/Graph/Frequency/In/0)  
+HTTP GET /Graph/Frequency/In/0
 
-* * *
+### Sample returned by server
 
-## GET /Graph/Frequency/AWeighting/In/{Channel}
+A PNG of the acquired data will be returned.
 
-Returns a PNG of the specified input channel data. The graph Y axis is log, with 10 dB/division spacing. The graph X axis is linear, ranging from 0 to 20 KHz. This is primarily to be used for developers doing sanity checks on measurements.
+* * * * *
+
+GET /Graph/Frequency/AWeighting/In/{Channel}
+--------------------------------------------
+
+Returns a PNG of the specified input channel data with A weighting applied. The graph Y axis is log, with 10 dB/division spacing. The graph X axis is linear, ranging from 0 to 20 KHz. This is primarily to be used for developers doing sanity checks on measurements.
 
 ### Arguments:
 
@@ -439,14 +549,31 @@ Returns a PNG of the specified input channel data. The graph Y axis is log, with
 
 ### Example:
 
-[`GET Graph/Frequency/In/0`](http://localhost:9401/Graph/Frequency/In/AWeighting/0)  
+HTTP GET /Graph/Frequency/In/AWeighting/0
 
-* * *
+### Sample returned by server
 
-## POST /Acquisition
+A PNG of the aquired data (A weighted) will be returned.
 
-Starts a new acquisition [jump to top](http://localhost:9401/#TOP)  
+* * * * *
 
-* * *
+POST /Acquisition
+-----------------
 
-`````
+Starts a new acquisition and blocks until the acquisition is complete. If you attached json body to the post body, then that will be decoded from mime64 data into double arrays, and that will be used as the output data. This double array is represented as volts on the QA401 output. See exmaples in QA401H\_TestApp
+
+* * * * *
+
+POST /AcquisitionAsync
+----------------------
+
+Starts a new acquisition and returns immediately. You must use GET Acquisition/Busy to determine if the acquisition has finished or not. A body, if present, is always ignored.
+
+* * * * *
+
+GET /AcquisitionBusy
+--------------------
+
+Returns 'true' while an acquisition is underway.
+
+* * * * *
